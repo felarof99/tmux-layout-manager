@@ -36,7 +36,7 @@ func baseIndex() int {
 
 func addWindows(sessionName, startDir string, windows []config.WindowConfig) error {
 	for _, win := range windows {
-		out, err := run("new-window", "-t", sessionName, "-n", win.Name, "-c", startDir, "-P", "-F", "#{window_index}")
+		out, err := run("new-window", "-t", "="+sessionName, "-n", win.Name, "-c", startDir, "-P", "-F", "#{window_index}")
 		if err != nil {
 			return fmt.Errorf("creating window %s: %w", win.Name, err)
 		}
@@ -57,12 +57,12 @@ func applyToNewSession(sessionName, startDir string, windows []config.WindowConf
 		var winIdx int
 		if i == 0 {
 			winIdx = base
-			if _, err := run("rename-window", "-t", fmt.Sprintf("%s:%d", sessionName, winIdx), win.Name); err != nil {
+			if _, err := run("rename-window", "-t", fmt.Sprintf("=%s:%d", sessionName, winIdx), win.Name); err != nil {
 				return fmt.Errorf("renaming window: %w", err)
 			}
 			firstWinIdx = winIdx
 		} else {
-			out, err := run("new-window", "-t", sessionName, "-n", win.Name, "-c", startDir, "-P", "-F", "#{window_index}")
+			out, err := run("new-window", "-t", "="+sessionName, "-n", win.Name, "-c", startDir, "-P", "-F", "#{window_index}")
 			if err != nil {
 				return fmt.Errorf("creating window %s: %w", win.Name, err)
 			}
@@ -74,7 +74,7 @@ func applyToNewSession(sessionName, startDir string, windows []config.WindowConf
 		}
 	}
 
-	firstWin := fmt.Sprintf("%s:%d", sessionName, firstWinIdx)
+	firstWin := fmt.Sprintf("=%s:%d", sessionName, firstWinIdx)
 	run("select-window", "-t", firstWin)
 	run("select-pane", "-t", firstWin+".0")
 
@@ -111,7 +111,7 @@ func applyPanes(sessionName string, windowIdx int, startDir string, win config.W
 			p = remainingSum * 100 / currentSum
 		}
 
-		target := fmt.Sprintf("%s:%d", sessionName, windowIdx)
+		target := fmt.Sprintf("=%s:%d", sessionName, windowIdx)
 		if _, err := run("split-window", splitFlag, "-t", target, "-p", strconv.Itoa(p), "-c", startDir); err != nil {
 			return fmt.Errorf("splitting pane %d in window %s: %w", i, win.Name, err)
 		}
@@ -123,7 +123,7 @@ func applyPanes(sessionName string, windowIdx int, startDir string, win config.W
 		}
 	}
 
-	run("select-pane", "-t", fmt.Sprintf("%s:%d.0", sessionName, windowIdx))
+	run("select-pane", "-t", fmt.Sprintf("=%s:%d.0", sessionName, windowIdx))
 
 	return nil
 }
@@ -135,7 +135,7 @@ func applyGridPanes(sessionName string, windowIdx int, startDir string, win conf
 	rows := win.Rows
 	cols := (len(win.Panes) + rows - 1) / rows // ceil division
 
-	winTarget := fmt.Sprintf("%s:%d", sessionName, windowIdx)
+	winTarget := fmt.Sprintf("=%s:%d", sessionName, windowIdx)
 
 	// Step 1: create columns by splitting horizontally.
 	// After this we have pane indices 0..cols-1, each being one column.
@@ -143,7 +143,7 @@ func applyGridPanes(sessionName string, windowIdx int, startDir string, win conf
 		remaining := cols - c
 		total := remaining + 1 // current pane represents 1 + remaining columns
 		p := remaining * 100 / total
-		target := fmt.Sprintf("%s:%d.0", sessionName, windowIdx)
+		target := fmt.Sprintf("=%s:%d.0", sessionName, windowIdx)
 		if _, err := run("split-window", "-h", "-t", target, "-p", strconv.Itoa(p), "-c", startDir); err != nil {
 			return fmt.Errorf("grid: creating column %d in window %s: %w", c, win.Name, err)
 		}
@@ -164,7 +164,7 @@ func applyGridPanes(sessionName string, windowIdx int, startDir string, win conf
 		}
 
 		// Split the column pane into rows
-		colPane := fmt.Sprintf("%s:%d.%d", sessionName, windowIdx, c)
+		colPane := fmt.Sprintf("=%s:%d.%d", sessionName, windowIdx, c)
 		for r := 1; r < panesInCol; r++ {
 			remaining := panesInCol - r
 			total := remaining + 1
@@ -183,7 +183,7 @@ func applyGridPanes(sessionName string, windowIdx int, startDir string, win conf
 		}
 	}
 
-	run("select-pane", "-t", fmt.Sprintf("%s:%d.0", sessionName, windowIdx))
+	run("select-pane", "-t", fmt.Sprintf("=%s:%d.0", sessionName, windowIdx))
 	// Use tiled layout to even out the grid
 	run("select-layout", "-t", winTarget, "tiled")
 
@@ -191,7 +191,7 @@ func applyGridPanes(sessionName string, windowIdx int, startDir string, win conf
 }
 
 func sendCommand(sessionName string, windowIdx, paneIdx int, cmd string) {
-	target := fmt.Sprintf("%s:%d.%d", sessionName, windowIdx, paneIdx)
+	target := fmt.Sprintf("=%s:%d.%d", sessionName, windowIdx, paneIdx)
 	run("send-keys", "-t", target, "-l", cmd)
 	run("send-keys", "-t", target, "Enter")
 }

@@ -29,7 +29,7 @@ func CurrentPaneDir() (string, error) {
 }
 
 func SessionExists(name string) bool {
-	_, err := run("has-session", "-t", name)
+	_, err := run("has-session", "-t", "="+name)
 	return err == nil
 }
 
