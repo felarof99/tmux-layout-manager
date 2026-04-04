@@ -89,6 +89,10 @@ func applyPanes(sessionName string, windowIdx int, startDir string, win config.W
 		return nil
 	}
 
+	if win.Rows > 1 {
+		return applyGridPanes(sessionName, windowIdx, startDir, win)
+	}
+
 	sizes := computeSizes(win.Panes)
 
 	splitFlag := "-h"
@@ -120,6 +124,68 @@ func applyPanes(sessionName string, windowIdx int, startDir string, win config.W
 	}
 
 	run("select-pane", "-t", fmt.Sprintf("%s:%d.0", sessionName, windowIdx))
+
+	return nil
+}
+
+// applyGridPanes creates a grid layout: first splits into columns (-h),
+// then splits each column into rows (-v).
+// Panes are laid out left-to-right, top-to-bottom.
+func applyGridPanes(sessionName string, windowIdx int, startDir string, win config.WindowConfig) error {
+	rows := win.Rows
+	cols := (len(win.Panes) + rows - 1) / rows // ceil division
+
+	winTarget := fmt.Sprintf("%s:%d", sessionName, windowIdx)
+
+	// Step 1: create columns by splitting horizontally.
+	// After this we have pane indices 0..cols-1, each being one column.
+	for c := 1; c < cols; c++ {
+		remaining := cols - c
+		total := remaining + 1 // current pane represents 1 + remaining columns
+		p := remaining * 100 / total
+		target := fmt.Sprintf("%s:%d.0", sessionName, windowIdx)
+		if _, err := run("split-window", "-h", "-t", target, "-p", strconv.Itoa(p), "-c", startDir); err != nil {
+			return fmt.Errorf("grid: creating column %d in window %s: %w", c, win.Name, err)
+		}
+	}
+
+	// Step 2: split each column pane vertically into rows.
+	// We iterate columns in reverse order so that pane indices don't shift
+	// as we add panes to earlier columns.
+	// After step 1, pane indices are 0..cols-1 (one per column).
+	for c := cols - 1; c >= 0; c-- {
+		panesInCol := rows
+		startIdx := c * rows
+		if startIdx+panesInCol > len(win.Panes) {
+			panesInCol = len(win.Panes) - startIdx
+		}
+		if panesInCol <= 1 {
+			continue
+		}
+
+		// Split the column pane into rows
+		colPane := fmt.Sprintf("%s:%d.%d", sessionName, windowIdx, c)
+		for r := 1; r < panesInCol; r++ {
+			remaining := panesInCol - r
+			total := remaining + 1
+			p := remaining * 100 / total
+			if _, err := run("split-window", "-v", "-t", colPane, "-p", strconv.Itoa(p), "-c", startDir); err != nil {
+				return fmt.Errorf("grid: creating row %d in column %d of window %s: %w", r, c, win.Name, err)
+			}
+		}
+	}
+
+	// Step 3: send commands. Panes are now ordered by tmux left-to-right, top-to-bottom.
+	// The pane ordering after grid creation: column 0 rows, column 1 rows, etc.
+	for i, pane := range win.Panes {
+		if pane.Cmd != "" {
+			sendCommand(sessionName, windowIdx, i, pane.Cmd)
+		}
+	}
+
+	run("select-pane", "-t", fmt.Sprintf("%s:%d.0", sessionName, windowIdx))
+	// Use tiled layout to even out the grid
+	run("select-layout", "-t", winTarget, "tiled")
 
 	return nil
 }

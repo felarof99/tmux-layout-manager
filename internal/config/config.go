@@ -23,6 +23,7 @@ type LayoutConfig struct {
 type WindowConfig struct {
 	Name  string       `yaml:"name"`
 	Split string       `yaml:"split,omitempty"` // "horizontal" (side by side, default) or "vertical" (stacked)
+	Rows  int          `yaml:"rows,omitempty"`  // >1 creates a grid: panes wrap into this many rows
 	Panes []PaneConfig `yaml:"panes"`
 }
 

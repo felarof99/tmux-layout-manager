@@ -53,6 +53,9 @@ func printLayout(layout *config.LayoutConfig) {
 		}
 		fmt.Printf("  %s %s\n", winColor.Sprintf("window %d:", i+1), winColor.Sprint(win.Name))
 		fmt.Printf("    split: %s\n", split)
+		if win.Rows > 1 {
+			fmt.Printf("    rows: %d\n", win.Rows)
+		}
 
 		for j, pane := range win.Panes {
 			name := pane.Name
