@@ -33,6 +33,10 @@ func SessionExists(name string) bool {
 	return err == nil
 }
 
+func CurrentWindowTarget() (string, error) {
+	return run("display-message", "-p", "#{session_name}:#{window_index}")
+}
+
 func NewSession(name, startDir string) error {
 	_, err := run("new-session", "-d", "-s", name, "-c", startDir)
 	return err
