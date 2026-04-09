@@ -28,13 +28,13 @@ func CurrentPaneDir() (string, error) {
 	return run("display-message", "-p", "#{pane_current_path}")
 }
 
+func CurrentPaneTarget() (string, error) {
+	return run("display-message", "-p", "#{pane_id}")
+}
+
 func SessionExists(name string) bool {
 	_, err := run("has-session", "-t", "="+name)
 	return err == nil
-}
-
-func CurrentWindowTarget() (string, error) {
-	return run("display-message", "-p", "#{session_name}:#{window_index}")
 }
 
 func NewSession(name, startDir string) error {
