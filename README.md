@@ -108,6 +108,9 @@ Top-level optional fields:
 layouts apply              # pick layout via fzf, apply to current session
 layouts apply dev          # apply named layout
 layouts apply dev -d .     # apply using specific working directory
+layouts split              # list current-pane split presets
+layouts split c            # keep current pane, add a 2x2 grid at the bottom
+layouts split a22          # split current pane into 2 rows, 2 columns
 
 layouts list               # list all layouts with window/pane counts
 layouts show dev           # show layout tree with panes, sizes, commands
@@ -122,7 +125,7 @@ layouts init               # create config with example layouts
 layouts --version          # print version
 ```
 
-Most commands have short aliases: `apply`→`a`, `list`→`ls`/`l`, `show`→`s`, `new`→`n`, `config`→`c`/`cfg`.
+Most commands have short aliases: `apply`→`a`, `split`→`sp`, `list`→`ls`/`l`, `show`→`s`, `new`→`n`, `config`→`c`/`cfg`.
 
 ## Show Output
 
@@ -150,16 +153,32 @@ The `ly` function maps subcommands to `layouts`:
 ```sh
 ly              # layouts list
 ly a dev        # layouts apply dev
+ly sp           # list split presets
+ly sp a22       # split current pane into 2 rows, 2 columns
 ly s dev        # layouts show dev
 ly n work dev   # layouts new work dev
 ly c            # layouts config
 ```
+
+## Split Presets
+
+`layouts split` works on the **current pane**, not the whole window. This is useful when you already have a left/right tmux setup and want to expand only the active pane.
+
+Built-in presets:
+
+- `2cols` — 1 row, 2 columns
+- `c` — keep the current pane on top, add 2 rows x 2 columns at the bottom
+- `a22` — 2 rows, 2 columns
+
+Legacy aliases are still accepted: `12`/`c12` → `2cols`, `22`/`c22` → `a22`.
 
 ## How It Works
 
 `layouts apply` adds new windows to your **current** tmux session. It does not touch existing windows — it only creates new ones. Each window is split according to the layout spec, and pane commands are sent via `tmux send-keys`.
 
 `layouts new` creates a **new** tmux session with the layout pre-applied. The first window reuses the session's initial window (renamed), subsequent windows are created fresh.
+
+`layouts split` only touches the **currently focused pane**. It keeps the current pane selected after creating the new panes so the workflow stays predictable.
 
 Pane sizes are computed proportionally. If some panes have explicit sizes and others don't, the remaining space is divided equally among unspecified panes. Sizes must sum to at most 100%.
 
