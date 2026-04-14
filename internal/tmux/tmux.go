@@ -32,6 +32,30 @@ func CurrentPaneTarget() (string, error) {
 	return run("display-message", "-p", "#{pane_id}")
 }
 
+func CurrentWindowZoomed() (bool, error) {
+	out, err := run("display-message", "-p", "#{window_zoomed_flag}")
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(out) == "1", nil
+}
+
+func TogglePaneZoom(paneTarget string) (bool, error) {
+	if paneTarget == "" {
+		var err error
+		paneTarget, err = CurrentPaneTarget()
+		if err != nil {
+			return false, err
+		}
+	}
+
+	if _, err := run("resize-pane", "-t", paneTarget, "-Z"); err != nil {
+		return false, err
+	}
+
+	return CurrentWindowZoomed()
+}
+
 func SessionExists(name string) bool {
 	_, err := run("has-session", "-t", "="+name)
 	return err == nil

@@ -14,16 +14,17 @@ func init() {
 }
 
 var splitCmd = &cobra.Command{
-	Use:         "split [preset]",
+	Use:         "split [spec]",
 	Aliases:     []string{"sp"},
 	Annotations: map[string]string{"group": "Layouts:"},
-	Short:       "Split the current pane using a built-in preset",
-	Long: `Split the current tmux pane using a built-in preset.
+	Short:       "Split the current pane using a generated grid spec",
+	Long: `Split the current tmux pane using a generated grid spec.
 
-  layouts split        — list split presets
-  layouts split 2cols  — split current pane into 1 row, 2 columns
-  layouts split c      — keep current pane on top, add a 2x2 grid below
-  layouts split a22    — split current pane into 2 rows, 2 columns`,
+  layouts split       — show split syntax and examples
+  layouts split 22    — split current pane into 2 rows, 2 columns
+  layouts split c22   — keep current pane, add a 2x2 grid below
+  layouts split 3x4   — split current pane into 3 rows, 4 columns
+  layouts split c3x4  — keep current pane, add a 3x4 grid below`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
@@ -35,9 +36,9 @@ var splitCmd = &cobra.Command{
 			return fmt.Errorf("must be inside a tmux session")
 		}
 
-		preset, ok := tmux.FindSplitPreset(args[0])
+		spec, ok := tmux.ParseSplitSpec(args[0])
 		if !ok {
-			return fmt.Errorf("unknown split preset %q\n\n%s", args[0], splitPresetHelp())
+			return fmt.Errorf("invalid split spec %q\n\n%s", args[0], splitPresetHelp())
 		}
 
 		paneTarget, err := tmux.CurrentPaneTarget()
@@ -50,11 +51,11 @@ var splitCmd = &cobra.Command{
 			return fmt.Errorf("getting working directory: %w", err)
 		}
 
-		if err := tmux.ApplySplitPreset(paneTarget, dir, preset.Name); err != nil {
+		if err := tmux.ApplySplitSpec(paneTarget, dir, spec); err != nil {
 			return fmt.Errorf("splitting pane: %w", err)
 		}
 
-		fmt.Printf("Split current pane using %q (%s)\n", preset.Name, strings.ToLower(preset.Description))
+		fmt.Printf("Split current pane using %q (%s)\n", spec.Name, spec.Description)
 		return nil
 	},
 }
@@ -65,12 +66,16 @@ func printSplitPresets() {
 
 func splitPresetHelp() string {
 	var b strings.Builder
-	b.WriteString("Available split presets:\n")
-	for _, preset := range tmux.SplitPresets() {
-		b.WriteString(fmt.Sprintf("  %-6s %s\n", preset.Name, preset.Description))
+	b.WriteString("Split spec syntax:\n")
+	b.WriteString("  <rows><cols>   split current pane into a grid (single-digit form)\n")
+	b.WriteString("  <rows>x<cols>  split current pane into a grid (multi-digit form)\n")
+	b.WriteString("  c<spec>        keep current pane and add the grid below it\n")
+	b.WriteString("\nExamples:\n")
+	for _, spec := range tmux.SplitExamples() {
+		b.WriteString(fmt.Sprintf("  %-6s %s\n", spec.Name, spec.Description))
 	}
 	b.WriteString("\n")
-	b.WriteString("Legacy aliases: 12/c12 -> 2cols, 22/c22 -> a22\n")
-	b.WriteString("Run `layouts split <preset>` to apply one to the current pane.")
+	b.WriteString("Aliases: 2cols -> 12, a22 -> 22, c/current/ca22 -> c22\n")
+	b.WriteString("Run `layouts split <spec>` to apply one to the current pane.")
 	return b.String()
 }

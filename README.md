@@ -108,9 +108,12 @@ Top-level optional fields:
 layouts apply              # pick layout via fzf, apply to current session
 layouts apply dev          # apply named layout
 layouts apply dev -d .     # apply using specific working directory
-layouts split              # list current-pane split presets
-layouts split c            # keep current pane, add a 2x2 grid at the bottom
-layouts split a22          # split current pane into 2 rows, 2 columns
+layouts split              # show split syntax and examples
+layouts split 22           # split current pane into 2 rows, 2 columns
+layouts split c22          # keep current pane, add a 2x2 grid below
+layouts split c34          # keep current pane, add a 3x4 grid below
+layouts maximize           # maximize current pane, run again to restore
+layouts z                  # same toggle, short alias
 
 layouts list               # list all layouts with window/pane counts
 layouts show dev           # show layout tree with panes, sizes, commands
@@ -125,7 +128,7 @@ layouts init               # create config with example layouts
 layouts --version          # print version
 ```
 
-Most commands have short aliases: `apply`→`a`, `split`→`sp`, `list`→`ls`/`l`, `show`→`s`, `new`→`n`, `config`→`c`/`cfg`.
+Most commands have short aliases: `apply`→`a`, `split`→`sp`, `maximize`→`max`/`m`/`zoom`/`z`, `list`→`ls`/`l`, `show`→`s`, `new`→`n`, `config`→`c`/`cfg`.
 
 ## Show Output
 
@@ -153,24 +156,31 @@ The `ly` function maps subcommands to `layouts`:
 ```sh
 ly              # layouts list
 ly a dev        # layouts apply dev
-ly sp           # list split presets
-ly sp a22       # split current pane into 2 rows, 2 columns
+ly sp           # show split syntax and examples
+ly sp 22        # split current pane into 2 rows, 2 columns
+ly sp c22       # keep current pane, add a 2x2 grid below
+ly z            # maximize current pane, run again to restore
 ly s dev        # layouts show dev
 ly n work dev   # layouts new work dev
 ly c            # layouts config
 ```
 
-## Split Presets
+## Split Specs
 
 `layouts split` works on the **current pane**, not the whole window. This is useful when you already have a left/right tmux setup and want to expand only the active pane.
 
-Built-in presets:
+Specs are generated at runtime:
 
-- `2cols` — 1 row, 2 columns
-- `c` — keep the current pane on top, add 2 rows x 2 columns at the bottom
-- `a22` — 2 rows, 2 columns
+- `<rows><cols>` creates a grid inside the current pane. Example: `22`, `34`
+- `<rows>x<cols>` does the same thing with clearer multi-digit syntax. Example: `3x4`
+- `c<spec>` keeps the current pane and adds the requested grid below it. Example: `c22`, `c3x4`
 
-Legacy aliases are still accepted: `12`/`c12` → `2cols`, `22`/`c22` → `a22`.
+Examples:
+
+- `12` or `2cols` — 1 row, 2 columns
+- `22` or `a22` — 2 rows, 2 columns
+- `c12` — keep current pane, add 1 row, 2 columns below
+- `c22` or `c` or `current` — keep current pane, add 2 rows, 2 columns below
 
 ## How It Works
 
@@ -178,7 +188,9 @@ Legacy aliases are still accepted: `12`/`c12` → `2cols`, `22`/`c22` → `a22`.
 
 `layouts new` creates a **new** tmux session with the layout pre-applied. The first window reuses the session's initial window (renamed), subsequent windows are created fresh.
 
-`layouts split` only touches the **currently focused pane**. It keeps the current pane selected after creating the new panes so the workflow stays predictable.
+`layouts split` only touches the **currently focused pane**. It keeps the current pane selected after creating the new panes so the workflow stays predictable. When you use a `c...` spec, the current pane stays in place and the generated grid is sized underneath it based on the requested row count.
+
+`layouts maximize` uses tmux's built-in zoom toggle for the **currently focused pane**. Running it again restores the original split view.
 
 Pane sizes are computed proportionally. If some panes have explicit sizes and others don't, the remaining space is divided equally among unspecified panes. Sizes must sum to at most 100%.
 
