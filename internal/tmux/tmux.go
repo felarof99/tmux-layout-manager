@@ -32,6 +32,10 @@ func CurrentPaneTarget() (string, error) {
 	return run("display-message", "-p", "#{pane_id}")
 }
 
+func CurrentWindowTarget() (string, error) {
+	return run("display-message", "-p", "#{window_id}")
+}
+
 func CurrentWindowZoomed() (bool, error) {
 	out, err := run("display-message", "-p", "#{window_zoomed_flag}")
 	if err != nil {

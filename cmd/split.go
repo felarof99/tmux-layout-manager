@@ -17,14 +17,16 @@ var splitCmd = &cobra.Command{
 	Use:         "split [spec]",
 	Aliases:     []string{"sp"},
 	Annotations: map[string]string{"group": "Layouts:"},
-	Short:       "Split the current pane using a generated grid spec",
-	Long: `Split the current tmux pane using a generated grid spec.
+	Short:       "Split the current pane or relayout the current window using a generated grid spec",
+	Long: `Split the current tmux pane or relayout the current tmux window using a generated grid spec.
 
   layouts split       — show split syntax and examples
   layouts split 22    — split current pane into 2 rows, 2 columns
-  layouts split c22   — keep current pane, add a 2x2 grid below
+  layouts split 23    — split current pane into 2 rows, 3 columns
+  layouts split c22   — relayout the current window into 2 rows, 2 columns
+  layouts split c23   — relayout the current window into 2 rows, 3 columns
   layouts split 3x4   — split current pane into 3 rows, 4 columns
-  layouts split c3x4  — keep current pane, add a 3x4 grid below`,
+  layouts split c3x4  — relayout the current window into 3 rows, 4 columns`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
@@ -46,13 +48,23 @@ var splitCmd = &cobra.Command{
 			return fmt.Errorf("getting current pane: %w", err)
 		}
 
+		windowTarget, err := tmux.CurrentWindowTarget()
+		if err != nil {
+			return fmt.Errorf("getting current window: %w", err)
+		}
+
 		dir, err := tmux.CurrentPaneDir()
 		if err != nil {
 			return fmt.Errorf("getting working directory: %w", err)
 		}
 
-		if err := tmux.ApplySplitSpec(paneTarget, dir, spec); err != nil {
-			return fmt.Errorf("splitting pane: %w", err)
+		if err := tmux.ApplySplitSpec(windowTarget, paneTarget, dir, spec); err != nil {
+			return fmt.Errorf("applying split spec: %w", err)
+		}
+
+		if spec.UseCurrentWindow {
+			fmt.Printf("Relaid out current window using %q (%s)\n", spec.Name, spec.Description)
+			return nil
 		}
 
 		fmt.Printf("Split current pane using %q (%s)\n", spec.Name, spec.Description)
@@ -69,13 +81,13 @@ func splitPresetHelp() string {
 	b.WriteString("Split spec syntax:\n")
 	b.WriteString("  <rows><cols>   split current pane into a grid (single-digit form)\n")
 	b.WriteString("  <rows>x<cols>  split current pane into a grid (multi-digit form)\n")
-	b.WriteString("  c<spec>        keep current pane and add the grid below it\n")
+	b.WriteString("  c<spec>        relayout the current window into that grid and keep existing panes inside it\n")
 	b.WriteString("\nExamples:\n")
 	for _, spec := range tmux.SplitExamples() {
 		b.WriteString(fmt.Sprintf("  %-6s %s\n", spec.Name, spec.Description))
 	}
 	b.WriteString("\n")
 	b.WriteString("Aliases: 2cols -> 12, a22 -> 22, c/current/ca22 -> c22\n")
-	b.WriteString("Run `layouts split <spec>` to apply one to the current pane.")
+	b.WriteString("Run `layouts split <spec>` to apply it to the current pane or current window.")
 	return b.String()
 }
