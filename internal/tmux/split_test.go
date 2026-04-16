@@ -99,3 +99,48 @@ func TestOrderExistingPanes(t *testing.T) {
 		}
 	}
 }
+
+func TestPaneGridTitle(t *testing.T) {
+	t.Parallel()
+
+	got := paneGridTitle("2", 1, 2, 1)
+	want := "2.1.2 beagle"
+	if got != want {
+		t.Fatalf("paneGridTitle() = %q, want %q", got, want)
+	}
+}
+
+func TestDogBreedAliasFallback(t *testing.T) {
+	t.Parallel()
+
+	got := dogBreedAlias(len(dogBreedAliases))
+	want := "dog31"
+	if got != want {
+		t.Fatalf("dogBreedAlias() = %q, want %q", got, want)
+	}
+}
+
+func TestTmuxTarget(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		want string
+	}{
+		{name: "@1", want: "@1"},
+		{name: "%2", want: "%2"},
+		{name: "work", want: "=work"},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := tmuxTarget(tt.name)
+			if got != tt.want {
+				t.Fatalf("tmuxTarget(%q) = %q, want %q", tt.name, got, tt.want)
+			}
+		})
+	}
+}

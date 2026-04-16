@@ -36,6 +36,10 @@ func CurrentWindowTarget() (string, error) {
 	return run("display-message", "-p", "#{window_id}")
 }
 
+func WindowName(windowTarget string) (string, error) {
+	return run("list-windows", "-t", tmuxTarget(windowTarget), "-F", "#{window_name}")
+}
+
 func CurrentWindowZoomed() (bool, error) {
 	out, err := run("display-message", "-p", "#{window_zoomed_flag}")
 	if err != nil {
@@ -68,4 +72,11 @@ func SessionExists(name string) bool {
 func NewSession(name, startDir string) error {
 	_, err := run("new-session", "-d", "-s", name, "-c", startDir)
 	return err
+}
+
+func tmuxTarget(target string) string {
+	if strings.HasPrefix(target, "@") || strings.HasPrefix(target, "%") {
+		return target
+	}
+	return "=" + target
 }

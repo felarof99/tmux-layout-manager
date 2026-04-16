@@ -82,6 +82,7 @@ func splitPresetHelp() string {
 	b.WriteString("  <rows><cols>   split current pane into a grid (single-digit form)\n")
 	b.WriteString("  <rows>x<cols>  split current pane into a grid (multi-digit form)\n")
 	b.WriteString("  c<spec>        relayout the current window into that grid and keep existing panes inside it\n")
+	b.WriteString("  pane titles    window.row.column plus dog alias, e.g. 2.1.2 beagle\n")
 	b.WriteString("\nExamples:\n")
 	for _, spec := range tmux.SplitExamples() {
 		b.WriteString(fmt.Sprintf("  %-6s %s\n", spec.Name, spec.Description))

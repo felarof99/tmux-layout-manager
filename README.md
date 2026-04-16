@@ -176,6 +176,7 @@ Specs are generated at runtime:
 - `<rows><cols>` creates a grid inside the current pane. Example: `22`, `34`
 - `<rows>x<cols>` does the same thing with clearer multi-digit syntax. Example: `3x4`
 - `c<spec>` relayouts the **current tmux window** into that grid and keeps the existing panes inside the new cells. Example: `c23`, `c3x4`
+- Generated grid panes are titled as `<window>.<row>.<column> <dog-alias>`. For example, row 1 column 2 in tmux window `2` becomes `2.1.2 beagle`.
 
 Examples:
 
@@ -193,6 +194,8 @@ Examples:
 `layouts new` creates a **new** tmux session with the layout pre-applied. The first window reuses the session's initial window (renamed), subsequent windows are created fresh.
 
 `layouts split` keeps the current pane selected after creating the new panes so the workflow stays predictable. Plain specs like `23` only split the **currently focused pane**. Specs with a `c` prefix relayout the **whole current window** into the requested grid and move any existing panes into the new cells before filling the remaining slots.
+
+After a split, `layouts split` enables pane border titles for that tmux window and names every generated grid cell with its window, row, column, and a short dog-breed alias. The aliases are hardcoded and deterministic, so the same cell position gets the same simple name each time.
 
 `layouts maximize` uses tmux's built-in zoom toggle for the **currently focused pane**. Running it again restores the original split view.
 

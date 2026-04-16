@@ -73,7 +73,11 @@ func ApplySplitSpec(windowTarget, paneTarget, startDir string, spec SplitSpec) e
 	if spec.UseCurrentWindow {
 		return reshapeWindowToGrid(windowTarget, paneTarget, startDir, spec.Rows, spec.Cols)
 	}
-	return splitPaneGrid(paneTarget, startDir, spec.Rows, spec.Cols)
+	paneIDs, err := splitPaneGrid(paneTarget, startDir, spec.Rows, spec.Cols)
+	if err != nil {
+		return err
+	}
+	return titleGridPanes(windowTarget, paneIDs, spec.Rows, spec.Cols)
 }
 
 func parseSplitDimensions(token string) (int, int, bool) {
@@ -146,14 +150,15 @@ func pluralize(n int, singular string) string {
 	return singular + "s"
 }
 
-func splitPaneGrid(paneTarget, startDir string, rows, cols int) error {
+func splitPaneGrid(paneTarget, startDir string, rows, cols int) ([]string, error) {
 	if rows < 1 || cols < 1 {
-		return fmt.Errorf("grid must have at least 1 row and 1 column")
+		return nil, fmt.Errorf("grid must have at least 1 row and 1 column")
 	}
 	if rows == 1 && cols == 1 {
-		return nil
+		return []string{paneTarget}, nil
 	}
 
+	gridPaneIDs := []string{paneTarget}
 	columnPanes := []string{paneTarget}
 	for c := 1; c < cols; c++ {
 		target := columnPanes[len(columnPanes)-1]
@@ -161,30 +166,36 @@ func splitPaneGrid(paneTarget, startDir string, rows, cols int) error {
 		p := remaining * 100 / (remaining + 1)
 		newPane, err := splitPane(target, "-h", p, startDir)
 		if err != nil {
-			return fmt.Errorf("creating column %d: %w", c+1, err)
+			return nil, fmt.Errorf("creating column %d: %w", c+1, err)
 		}
 		columnPanes = append(columnPanes, newPane)
+		gridPaneIDs = append(gridPaneIDs, newPane)
 	}
 
 	for _, columnPane := range columnPanes {
-		if err := splitPaneRows(columnPane, startDir, rows); err != nil {
-			return err
+		rowPanes, err := splitPaneRows(columnPane, startDir, rows)
+		if err != nil {
+			return nil, err
 		}
+		gridPaneIDs = append(gridPaneIDs, rowPanes...)
 	}
 
 	run("select-pane", "-t", paneTarget)
-	return nil
+	return gridPaneIDs, nil
 }
 
-func splitPaneRows(paneTarget, startDir string, rows int) error {
+func splitPaneRows(paneTarget, startDir string, rows int) ([]string, error) {
+	rowPaneIDs := make([]string, 0, rows-1)
 	for r := 1; r < rows; r++ {
 		remaining := rows - r
 		p := remaining * 100 / (remaining + 1)
-		if _, err := splitPane(paneTarget, "-v", p, startDir); err != nil {
-			return fmt.Errorf("creating row %d: %w", r+1, err)
+		newPane, err := splitPane(paneTarget, "-v", p, startDir)
+		if err != nil {
+			return nil, fmt.Errorf("creating row %d: %w", r+1, err)
 		}
+		rowPaneIDs = append(rowPaneIDs, newPane)
 	}
-	return nil
+	return rowPaneIDs, nil
 }
 
 type windowPane struct {
@@ -238,7 +249,7 @@ func reshapeWindowToGrid(windowTarget, paneTarget, startDir string, rows, cols i
 		stagingWindows = append(stagingWindows, stagingWindow)
 	}
 
-	if err := splitPaneGrid(paneTarget, startDir, rows, cols); err != nil {
+	if _, err := splitPaneGrid(paneTarget, startDir, rows, cols); err != nil {
 		return err
 	}
 
@@ -257,12 +268,24 @@ func reshapeWindowToGrid(windowTarget, paneTarget, startDir string, rows, cols i
 		}
 	}
 
+	finalPanes, err := listWindowPanes(windowTarget)
+	if err != nil {
+		return err
+	}
+	finalPaneIDs := make([]string, 0, len(finalPanes))
+	for _, pane := range finalPanes {
+		finalPaneIDs = append(finalPaneIDs, pane.ID)
+	}
+	if err := titleGridPanes(windowTarget, finalPaneIDs, rows, cols); err != nil {
+		return err
+	}
+
 	run("select-pane", "-t", paneTarget)
 	return nil
 }
 
 func listWindowPanes(windowTarget string) ([]windowPane, error) {
-	out, err := run("list-panes", "-t", "="+windowTarget, "-F", "#{pane_id}\t#{pane_index}\t#{pane_left}\t#{pane_top}")
+	out, err := run("list-panes", "-t", tmuxTarget(windowTarget), "-F", "#{pane_id}\t#{pane_index}\t#{pane_left}\t#{pane_top}")
 	if err != nil {
 		return nil, fmt.Errorf("listing panes in current window: %w", err)
 	}
@@ -336,6 +359,112 @@ func sortWindowPanes(panes []windowPane) {
 		}
 		return panes[i].Index < panes[j].Index
 	})
+}
+
+var dogBreedAliases = []string{
+	"akita",
+	"beagle",
+	"boxer",
+	"corgi",
+	"collie",
+	"dalmatian",
+	"doberman",
+	"husky",
+	"labrador",
+	"mastiff",
+	"poodle",
+	"pointer",
+	"pug",
+	"samoyed",
+	"schnauzer",
+	"shiba",
+	"spaniel",
+	"terrier",
+	"whippet",
+	"retriever",
+	"borzoi",
+	"basenji",
+	"briard",
+	"havanese",
+	"keeshond",
+	"maltese",
+	"papillon",
+	"saluki",
+	"vizsla",
+	"weimaraner",
+}
+
+func titleGridPanes(windowTarget string, paneIDs []string, rows, cols int) error {
+	if rows < 1 || cols < 1 {
+		return fmt.Errorf("grid must have at least 1 row and 1 column")
+	}
+
+	paneIDSet := make(map[string]struct{}, len(paneIDs))
+	for _, paneID := range paneIDs {
+		paneIDSet[paneID] = struct{}{}
+	}
+
+	panes, err := listWindowPanes(windowTarget)
+	if err != nil {
+		return err
+	}
+
+	gridPanes := make([]windowPane, 0, len(paneIDs))
+	for _, pane := range panes {
+		if _, ok := paneIDSet[pane.ID]; ok {
+			gridPanes = append(gridPanes, pane)
+		}
+	}
+
+	expectedPaneCount := rows * cols
+	if len(gridPanes) != expectedPaneCount {
+		return fmt.Errorf("expected %d panes to title, got %d", expectedPaneCount, len(gridPanes))
+	}
+	sortWindowPanes(gridPanes)
+
+	windowName, err := WindowName(windowTarget)
+	if err != nil {
+		return fmt.Errorf("getting window name: %w", err)
+	}
+	if strings.TrimSpace(windowName) == "" {
+		windowName = "window"
+	}
+
+	if err := enablePaneTitles(windowTarget); err != nil {
+		return err
+	}
+
+	for i, pane := range gridPanes {
+		row := i/cols + 1
+		col := i%cols + 1
+		title := paneGridTitle(windowName, row, col, i)
+		if _, err := run("select-pane", "-t", pane.ID, "-T", title); err != nil {
+			return fmt.Errorf("setting pane title for %s: %w", pane.ID, err)
+		}
+	}
+
+	return nil
+}
+
+func enablePaneTitles(windowTarget string) error {
+	if _, err := run("set-window-option", "-t", tmuxTarget(windowTarget), "pane-border-status", "top"); err != nil {
+		return fmt.Errorf("enabling pane border titles: %w", err)
+	}
+	if _, err := run("set-window-option", "-t", tmuxTarget(windowTarget), "pane-border-format", "#{pane_title}"); err != nil {
+		return fmt.Errorf("setting pane border format: %w", err)
+	}
+	return nil
+}
+
+func paneGridTitle(windowName string, row, col, index int) string {
+	return fmt.Sprintf("%s.%d.%d %s", windowName, row, col, dogBreedAlias(index))
+}
+
+func dogBreedAlias(index int) string {
+	if index >= 0 && index < len(dogBreedAliases) {
+		return dogBreedAliases[index]
+	}
+	return fmt.Sprintf("dog%d", index+1)
 }
 
 func stagePane(paneTarget string) (string, error) {
