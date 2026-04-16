@@ -438,7 +438,7 @@ func titleGridPanes(windowTarget string, paneIDs []string, rows, cols int) error
 		row := i/cols + 1
 		col := i%cols + 1
 		title := paneGridTitle(windowName, row, col, i)
-		if _, err := run("select-pane", "-t", pane.ID, "-T", title); err != nil {
+		if err := setPaneLayoutTitle(pane.ID, title); err != nil {
 			return fmt.Errorf("setting pane title for %s: %w", pane.ID, err)
 		}
 	}
@@ -446,11 +446,16 @@ func titleGridPanes(windowTarget string, paneIDs []string, rows, cols int) error
 	return nil
 }
 
+func setPaneLayoutTitle(paneTarget, title string) error {
+	_, err := run("set-option", "-p", "-t", paneTarget, "@layouts_title", title)
+	return err
+}
+
 func enablePaneTitles(windowTarget string) error {
 	if _, err := run("set-window-option", "-t", tmuxTarget(windowTarget), "pane-border-status", "top"); err != nil {
 		return fmt.Errorf("enabling pane border titles: %w", err)
 	}
-	if _, err := run("set-window-option", "-t", tmuxTarget(windowTarget), "pane-border-format", "#{pane_title}"); err != nil {
+	if _, err := run("set-window-option", "-t", tmuxTarget(windowTarget), "pane-border-format", "#{?@layouts_title,#{@layouts_title},#{pane_title}}"); err != nil {
 		return fmt.Errorf("setting pane border format: %w", err)
 	}
 	return nil

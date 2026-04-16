@@ -195,7 +195,7 @@ Examples:
 
 `layouts split` keeps the current pane selected after creating the new panes so the workflow stays predictable. Plain specs like `23` only split the **currently focused pane**. Specs with a `c` prefix relayout the **whole current window** into the requested grid and move any existing panes into the new cells before filling the remaining slots.
 
-After a split, `layouts split` enables pane border titles for that tmux window and names every generated grid cell with its window, row, column, and a short dog-breed alias. The aliases are hardcoded and deterministic, so the same cell position gets the same simple name each time.
+After a split, `layouts split` enables pane border titles for that tmux window and names every generated grid cell with its window, row, column, and a short dog-breed alias. The title is stored in a layout-manager pane option, so shell or program title updates do not overwrite it. The aliases are hardcoded and deterministic, so the same cell position gets the same simple name each time.
 
 `layouts maximize` uses tmux's built-in zoom toggle for the **currently focused pane**. Running it again restores the original split view.
 
