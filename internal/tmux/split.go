@@ -1,7 +1,9 @@
 package tmux
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"sort"
 	"strconv"
 	"strings"
@@ -362,36 +364,159 @@ func sortWindowPanes(panes []windowPane) {
 }
 
 var dogBreedAliases = []string{
+	"affenpinscher",
+	"airedale",
 	"akita",
+	"alaskan-malamute",
+	"american-bulldog",
+	"american-eskimo",
+	"anatolian",
+	"australian-cattle",
+	"australian-shepherd",
+	"basenji",
+	"basset",
 	"beagle",
+	"bearded-collie",
+	"beauceron",
+	"belgian-malinois",
+	"bernese",
+	"bichon",
+	"bloodhound",
+	"border-collie",
+	"border-terrier",
+	"borzoi",
+	"boston",
 	"boxer",
+	"brittany",
+	"brussels-griffon",
+	"bull-terrier",
+	"bulldog",
+	"bullmastiff",
+	"cairn",
+	"canaan",
+	"cane-corso",
+	"cardigan-corgi",
+	"cavalier",
+	"chesapeake",
+	"chihuahua",
+	"chow",
 	"corgi",
-	"collie",
 	"dalmatian",
+	"dachshund",
+	"doberman",
+	"duck-toller",
+	"elkhound",
+	"english-setter",
+	"english-shepherd",
+	"english-springer",
+	"entlebucher",
+	"eskimo",
+	"finnish-spitz",
+	"flatcoat",
+	"foxhound",
+	"french-bulldog",
+	"german-pinscher",
+	"german-shepherd",
+	"giant-schnauzer",
+	"glen-imaal",
+	"golden",
+	"gordon-setter",
+	"great-dane",
+	"great-pyrenees",
+	"greyhound",
+	"havanese",
+	"heeler",
 	"doberman",
 	"husky",
+	"ibizan",
+	"irish-setter",
+	"irish-terrier",
+	"irish-wolfhound",
+	"italian-greyhound",
+	"jack-russell",
+	"japanese-chin",
+	"keeshond",
+	"kerry-blue",
+	"komondor",
+	"kuvasz",
 	"labrador",
+	"lagotto",
+	"leonberger",
+	"lhasa-apso",
+	"malinois",
+	"maltese",
+	"manchester",
 	"mastiff",
+	"mini-schnauzer",
+	"newfoundland",
+	"norfolk",
+	"norwegian-buhund",
+	"norwich",
+	"old-english",
+	"otterhound",
+	"papillon",
+	"pekingese",
+	"pembroke",
+	"pharaoh",
+	"pitbull",
 	"poodle",
 	"pointer",
+	"pomeranian",
+	"portuguese-water",
 	"pug",
+	"puli",
+	"rat-terrier",
+	"redbone",
+	"ridgeback",
+	"rottweiler",
+	"russell",
+	"saluki",
 	"samoyed",
 	"schnauzer",
+	"schipperke",
+	"scottie",
+	"shar-pei",
+	"sheltie",
 	"shiba",
-	"spaniel",
-	"terrier",
-	"whippet",
-	"retriever",
-	"borzoi",
-	"basenji",
-	"briard",
-	"havanese",
-	"keeshond",
-	"maltese",
-	"papillon",
-	"saluki",
+	"shih-tzu",
+	"siberian",
+	"silky",
+	"skye",
+	"staffordshire",
+	"standard-poodle",
+	"swedish-vallhund",
+	"tibetan-mastiff",
+	"tibetan-spaniel",
+	"tibetan-terrier",
+	"toy-fox",
 	"vizsla",
 	"weimaraner",
+	"welsh-terrier",
+	"westie",
+	"wheaten",
+	"whippet",
+	"wirehaired-pointer",
+	"xolo",
+	"yorkie",
+	"spaniel",
+	"terrier",
+	"retriever",
+	"briard",
+	"clumber",
+	"collie",
+	"curlycoat",
+	"field-spaniel",
+	"harrier",
+	"jindo",
+	"kai-ken",
+	"lowchen",
+	"munsterlander",
+	"plott",
+	"pyrenean-shepherd",
+	"sealyham",
+	"sussex",
+	"tosa",
+	"treeing-walker",
 }
 
 func titleGridPanes(windowTarget string, paneIDs []string, rows, cols int) error {
@@ -434,10 +559,15 @@ func titleGridPanes(windowTarget string, paneIDs []string, rows, cols int) error
 		return err
 	}
 
+	aliases, err := randomDogBreedAliases(len(gridPanes))
+	if err != nil {
+		return fmt.Errorf("randomizing dog aliases: %w", err)
+	}
+
 	for i, pane := range gridPanes {
 		row := i/cols + 1
 		col := i%cols + 1
-		title := paneGridTitle(windowName, row, col, i)
+		title := paneGridTitle(windowName, row, col, aliases[i])
 		if err := setPaneLayoutTitle(pane.ID, title); err != nil {
 			return fmt.Errorf("setting pane title for %s: %w", pane.ID, err)
 		}
@@ -461,15 +591,39 @@ func enablePaneTitles(windowTarget string) error {
 	return nil
 }
 
-func paneGridTitle(windowName string, row, col, index int) string {
-	return fmt.Sprintf("%s.%d.%d %s", windowName, row, col, dogBreedAlias(index))
+func paneGridTitle(windowName string, row, col int, alias string) string {
+	return fmt.Sprintf("%s.%d.%d %s", windowName, row, col, alias)
 }
 
-func dogBreedAlias(index int) string {
-	if index >= 0 && index < len(dogBreedAliases) {
-		return dogBreedAliases[index]
+func randomDogBreedAliases(count int) ([]string, error) {
+	aliases := make([]string, len(dogBreedAliases))
+	copy(aliases, dogBreedAliases)
+
+	for i := len(aliases) - 1; i > 0; i-- {
+		j, err := cryptoRandomInt(i + 1)
+		if err != nil {
+			return nil, err
+		}
+		aliases[i], aliases[j] = aliases[j], aliases[i]
 	}
-	return fmt.Sprintf("dog%d", index+1)
+
+	out := make([]string, 0, count)
+	for len(out) < count {
+		if len(out) < len(aliases) {
+			out = append(out, aliases[len(out)])
+			continue
+		}
+		out = append(out, fmt.Sprintf("dog%d", len(out)+1))
+	}
+	return out, nil
+}
+
+func cryptoRandomInt(max int) (int, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
+	if err != nil {
+		return 0, err
+	}
+	return int(n.Int64()), nil
 }
 
 func stagePane(paneTarget string) (string, error) {
