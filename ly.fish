@@ -10,6 +10,8 @@ function ly
     switch $subcmd
         case a apply
             layouts apply $rest
+        case sp split
+            layouts split $rest
         case ls l list
             layouts list $rest
         case s show

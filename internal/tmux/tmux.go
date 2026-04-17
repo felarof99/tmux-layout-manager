@@ -28,16 +28,55 @@ func CurrentPaneDir() (string, error) {
 	return run("display-message", "-p", "#{pane_current_path}")
 }
 
+func CurrentPaneTarget() (string, error) {
+	return run("display-message", "-p", "#{pane_id}")
+}
+
+func CurrentWindowTarget() (string, error) {
+	return run("display-message", "-p", "#{window_id}")
+}
+
+func WindowName(windowTarget string) (string, error) {
+	return run("list-windows", "-t", tmuxTarget(windowTarget), "-F", "#{window_name}")
+}
+
+func CurrentWindowZoomed() (bool, error) {
+	out, err := run("display-message", "-p", "#{window_zoomed_flag}")
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(out) == "1", nil
+}
+
+func TogglePaneZoom(paneTarget string) (bool, error) {
+	if paneTarget == "" {
+		var err error
+		paneTarget, err = CurrentPaneTarget()
+		if err != nil {
+			return false, err
+		}
+	}
+
+	if _, err := run("resize-pane", "-t", paneTarget, "-Z"); err != nil {
+		return false, err
+	}
+
+	return CurrentWindowZoomed()
+}
+
 func SessionExists(name string) bool {
 	_, err := run("has-session", "-t", "="+name)
 	return err == nil
 }
 
-func CurrentWindowTarget() (string, error) {
-	return run("display-message", "-p", "#{session_name}:#{window_index}")
-}
-
 func NewSession(name, startDir string) error {
 	_, err := run("new-session", "-d", "-s", name, "-c", startDir)
 	return err
+}
+
+func tmuxTarget(target string) string {
+	if strings.HasPrefix(target, "@") || strings.HasPrefix(target, "%") {
+		return target
+	}
+	return "=" + target
 }
