@@ -103,20 +103,46 @@ func TestOrderExistingPanes(t *testing.T) {
 func TestPaneGridTitle(t *testing.T) {
 	t.Parallel()
 
-	got := paneGridTitle("2", 1, 2, 1)
+	got := paneGridTitle("2", 1, 2, "beagle")
 	want := "2.1.2 beagle"
 	if got != want {
 		t.Fatalf("paneGridTitle() = %q, want %q", got, want)
 	}
 }
 
-func TestDogBreedAliasFallback(t *testing.T) {
+func TestDogBreedAliasPool(t *testing.T) {
 	t.Parallel()
 
-	got := dogBreedAlias(len(dogBreedAliases))
-	want := "dog31"
-	if got != want {
-		t.Fatalf("dogBreedAlias() = %q, want %q", got, want)
+	if len(dogBreedAliases) < 100 {
+		t.Fatalf("len(dogBreedAliases) = %d, want at least 100", len(dogBreedAliases))
+	}
+
+	seen := make(map[string]struct{}, len(dogBreedAliases))
+	for _, alias := range dogBreedAliases {
+		if _, ok := seen[alias]; ok {
+			t.Fatalf("duplicate dog breed alias %q", alias)
+		}
+		seen[alias] = struct{}{}
+	}
+}
+
+func TestRandomDogBreedAliases(t *testing.T) {
+	t.Parallel()
+
+	got, err := randomDogBreedAliases(12)
+	if err != nil {
+		t.Fatalf("randomDogBreedAliases() error = %v", err)
+	}
+	if len(got) != 12 {
+		t.Fatalf("randomDogBreedAliases() len = %d, want 12", len(got))
+	}
+
+	seen := make(map[string]struct{}, len(got))
+	for _, alias := range got {
+		if _, ok := seen[alias]; ok {
+			t.Fatalf("duplicate alias %q in %v", alias, got)
+		}
+		seen[alias] = struct{}{}
 	}
 }
 

@@ -426,7 +426,6 @@ var dogBreedAliases = []string{
 	"greyhound",
 	"havanese",
 	"heeler",
-	"doberman",
 	"husky",
 	"ibizan",
 	"irish-setter",
